@@ -2,7 +2,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/release/python-380/)
-[![Build Status](https://github.com/LenonAnthony/ic-dataset-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/LenonAnthony/ic-dataset-generator/actions)
 
 ## Sobre
 
