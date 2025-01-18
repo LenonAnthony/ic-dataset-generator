@@ -1,24 +1,13 @@
-import os
 import pandas as pd
-from dotenv import load_dotenv
-from distilabel.llms import AzureOpenAILLM
-from distilabel.pipeline import Pipeline
-from distilabel.steps import LoadDataFromDicts
-from distilabel.steps.tasks import TextGeneration
+from aac_struct_gen.services import AACService
+from aac_struct_gen.utils import load_environment, initialize_llm
+from aac_struct_gen.models  import DatasetRow
 
+def generate_structs(max_iterations=1):
+    token = load_environment()
+    llm = initialize_llm(token)
 
-def generate_structs(max_iterations=10):
-    token = os.environ["GITHUB_TOKEN"]
-    endpoint = "https://models.inference.ai.azure.com"
-    model_name = "gpt-4o-mini"
-    api_version = "2023-12-01-preview"
-
-    llm = AzureOpenAILLM(
-        model=model_name,
-        api_key=token,
-        base_url=endpoint,
-        api_version=api_version,
-    )
+    aac_service = AACService(llm)
 
     input_file = "dataset.csv"
     output_file = "dataset.csv"
@@ -33,8 +22,7 @@ def generate_structs(max_iterations=10):
             print(f"Selected Words: {inputs}")
 
             try:
-                with Pipeline("SynonymGeneration") as synonym_pipeline:
-                    synonym_system_prompt = """You are a specialized educational assistant focused on generating contextually relevant synonyms in Brazilian Portuguese for AAC (Augmentative and Alternative Communication) systems. Your task is to analyze the input phrase or expression and generate semantically equivalent alternatives that preserve the complete meaning and context, using natural Brazilian Portuguese expressions as commonly used today.
+                synonym_system_prompt = """You are a specialized educational assistant focused on generating contextually relevant synonyms in Brazilian Portuguese for AAC (Augmentative and Alternative Communication) systems. Your task is to analyze the input phrase or expression and generate semantically equivalent alternatives that preserve the complete meaning and context, using natural Brazilian Portuguese expressions as commonly used today.
 
                                             For each input phrase:
                                             - Generate exactly 3 alternative expressions that:
@@ -77,47 +65,9 @@ def generate_structs(max_iterations=10):
                                             4. Ensure expressions are suitable for all age groups
                                             5. Consider ease of pictogram representation
 
-                                            Output format: Return only the three semantically equivalent expressions as a comma-separated list in Brazilian Portuguese, without any additional text or formatting."""
-
-                    load_words = LoadDataFromDicts(
-                        name="load_words",
-                        data=[
-                            {
-                                "system_prompt": synonym_system_prompt,
-                                "instruction": f"Generate synonyms for the word: {word}",
-                            }
-                            for word in inputs
-                        ],
-                    )
-
-                    synonym_generation = TextGeneration(
-                        name="synonym_generation",
-                        llm=llm,
-                        input_batch_size=8,
-                        output_mappings={"model_name": "generation_model"},
-                    )
-                    load_words >> synonym_generation
-
-                synonym_distiset = synonym_pipeline.run(
-                    parameters={
-                        synonym_generation.name: {
-                            "llm": {"generation_kwargs": {"max_new_tokens": 256}}
-                        }
-                    },
-                    use_cache=False,
-                )
-
-                synonym_results = synonym_distiset["default"]["train"]
-                new_inputs = []
-
-                for result in synonym_results:
-                    if "generation" in result:
-                        generated_text = result["generation"]
-                        synonyms = [
-                            synonym.strip() for synonym in generated_text.split(",")
-                        ]
-                        new_inputs.extend(synonyms)
-
+                                            Output format: Return only the three semantically equivalent expressions as a comma-separated list in Brazilian Portuguese, without any additional text or formatting."""  # Coloque o prompt aqui
+                synonym_responses = aac_service.generate_synonyms(inputs, synonym_system_prompt)
+                new_inputs = [synonym for response in synonym_responses for synonym in response.synonyms]
                 print(f"Generated synonyms: {new_inputs}")
 
             except Exception as e:
@@ -125,8 +75,7 @@ def generate_structs(max_iterations=10):
                 break
 
             try:
-                with Pipeline("CardGeneration") as card_pipeline:
-                    system_prompt = """You will take the role of an expert assistant specialized in creating Augmentative and Alternative Communication (AAC) speech cards for children and individuals with various needs, including:
+                card_system_prompt = """You will take the role of an expert assistant specialized in creating Augmentative and Alternative Communication (AAC) speech cards for children and individuals with various needs, including:
                                     - Autism Spectrum Disorder (ASD)
                                     - Speech impediments
                                     - Motor coordination difficulties
@@ -187,67 +136,11 @@ def generate_structs(max_iterations=10):
                                     Pedir para Usar o Banheiro, eu gostaria de usar o banheiro, 🚽
                                     Lavar as Mãos, eu quero lavar as mãos, 🧼
                                     Buscar Papel Higiênico, eu preciso de papel higiênico, 🧻
-                                    Desinfetar as Mãos, eu quero desinfetar as mãos, 🧴
-                                    """
-
-                    load_synonyms = LoadDataFromDicts(
-                        name="load_synonyms",
-                        data=[
-                            {
-                                "system_prompt": system_prompt,
-                                "instruction": (
-                                    f"Create a speech card following EXACTLY this format:\n"
-                                    f"input: {word}\n"
-                                    f"output: [5 options]"
-                                ),
-                            }
-                            for word in new_inputs
-                        ],
-                    )
-
-                    card_generation = TextGeneration(
-                        name="card_generation",
-                        llm=llm,
-                        input_batch_size=8,
-                        output_mappings={"model_name": "generation_model"},
-                    )
-                    load_synonyms >> card_generation
-
-                card_distiset = card_pipeline.run(
-                    parameters={
-                        card_generation.name: {
-                            "llm": {"generation_kwargs": {"max_new_tokens": 256}}
-                        }
-                    },
-                    use_cache=False,
-                )
-
-                new_data = []
-                for synonym, card in zip(new_inputs, card_distiset["default"]["train"]):
-                    if "generation" in card:
-                        generated_text = card["generation"]
-                        print(f"Card generated to {synonym}:\n{generated_text}\n")
-                        try:
-                            parts = generated_text.split("output:")
-                            if len(parts) == 2:
-                                input_part = parts[0].replace("input:", "").strip()
-                                output_part = parts[1].strip()
-                                new_data.append(
-                                    {"input": input_part, "output": output_part}
-                                )
-                            else:
-                                new_data.append(
-                                    {"input": synonym, "output": generated_text}
-                                )
-                        except Exception as e:
-                            print(f"Error in card generation {synonym}: {e}")
-                            new_data.append(
-                                {"input": synonym, "output": generated_text}
-                            )
-
-                new_dataset = pd.DataFrame(new_data)
-                combined_dataset = pd.concat([dataset, new_dataset], ignore_index=True)
-                combined_dataset.to_csv(output_file, index=False)
+                                    Desinfetar as Mãos, eu quero desinfetar as mãos, 🧴"""  # Coloque o prompt aqui
+                card_responses = aac_service.generate_cards(new_inputs, card_system_prompt)
+                new_data = [DatasetRow(input=response.input, output="\n".join(response.output)) for response in card_responses]
+                print(f"Generated cards: {new_data}")
+                aac_service.update_dataset(output_file, new_data)
                 print(f"Dataset updated")
 
             except Exception as e:
@@ -263,8 +156,6 @@ def generate_structs(max_iterations=10):
     finally:
         print(f"\nFinished process with {iteration} iterations")
 
-
 if __name__ == "__main__":
-    load_dotenv()
-    max_iterations = 5
+    max_iterations = 1
     generate_structs(max_iterations)
