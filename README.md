@@ -30,13 +30,11 @@ pip install -r requirements.txt
 
 ## Configuração
 
-Crie um arquivo .env na raiz do projeto e adicione suas variáveis de ambiente: GITHUB_TOKEN=your_github_token ou your_azure_api_token
+Crie um arquivo .env na raiz do projeto e adicione suas variáveis de ambiente: OPENAI_API_KEY=your_openai_api_key
 
 ## Uso 
 
-python dataset_generator.py
-
-
+python scripts/generate_structs.py
 
 Este projeto foi desenvolvido como parte de um artigo sobre o design e implementação de modelos de linguagem pequenos para Comunicação Aumentativa e Alternativa (AAC). Para mais informações, consulte o artigo completo
 (colocar depois).
