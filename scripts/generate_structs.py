@@ -1,4 +1,7 @@
 import pandas as pd
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from aac_struct_gen.services import AACService
 from aac_struct_gen.utils import load_environment, initialize_llm
 from aac_struct_gen.models  import DatasetRow
@@ -65,7 +68,7 @@ def generate_structs(max_iterations=1):
                                             4. Ensure expressions are suitable for all age groups
                                             5. Consider ease of pictogram representation
 
-                                            Output format: Return only the three semantically equivalent expressions as a comma-separated list in Brazilian Portuguese, without any additional text or formatting."""  # Coloque o prompt aqui
+                                            Output format: Return only the three semantically equivalent expressions as a comma-separated list in Brazilian Portuguese, without any additional text or formatting."""  
                 synonym_responses = aac_service.generate_synonyms(inputs, synonym_system_prompt)
                 new_inputs = [synonym for response in synonym_responses for synonym in response.synonyms]
                 print(f"Generated synonyms: {new_inputs}")
@@ -136,7 +139,7 @@ def generate_structs(max_iterations=1):
                                     Pedir para Usar o Banheiro, eu gostaria de usar o banheiro, 🚽
                                     Lavar as Mãos, eu quero lavar as mãos, 🧼
                                     Buscar Papel Higiênico, eu preciso de papel higiênico, 🧻
-                                    Desinfetar as Mãos, eu quero desinfetar as mãos, 🧴"""  # Coloque o prompt aqui
+                                    Desinfetar as Mãos, eu quero desinfetar as mãos, 🧴"""  
                 card_responses = aac_service.generate_cards(new_inputs, card_system_prompt)
                 new_data = [DatasetRow(input=response.input, output="\n".join(response.output)) for response in card_responses]
                 print(f"Generated cards: {new_data}")
@@ -157,5 +160,5 @@ def generate_structs(max_iterations=1):
         print(f"\nFinished process with {iteration} iterations")
 
 if __name__ == "__main__":
-    max_iterations = 1
+    max_iterations = 10
     generate_structs(max_iterations)
