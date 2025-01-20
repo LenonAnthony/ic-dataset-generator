@@ -25,50 +25,60 @@ def generate_structs(max_iterations=1):
             print(f"Selected Words: {inputs}")
 
             try:
-                synonym_system_prompt = """You are a specialized educational assistant focused on generating contextually relevant synonyms in Brazilian Portuguese for AAC (Augmentative and Alternative Communication) systems. Your task is to analyze the input phrase or expression and generate semantically equivalent alternatives that preserve the complete meaning and context, using natural Brazilian Portuguese expressions as commonly used today.
+                synonym_system_prompt = """You are a specialized educational assistant focused on generating contextually relevant synonyms and helpful words in Brazilian Portuguese for AAC (Augmentative and Alternative Communication) systems. Your task is to analyze the input phrase or expression and generate:
+                                        - 2 semantically equivalent alternatives that preserve the complete meaning and context
+                                        - 1 random but contextually helpful Brazilian Portuguese word that could assist children with mobility challenges, AAC users, neurodivergent individuals, etc.
 
-                                            For each input phrase:
-                                            - Generate exactly 3 alternative expressions that:
-                                            1. Maintain the same semantic meaning as the complete input
-                                            2. Use contemporary, natural Brazilian Portuguese
-                                            3. Reflect everyday speech while maintaining clarity
-                                            4. Are appropriate for pictogram representation
-                                            5. Are easily understood by children
+                                        For each input phrase:
+                                        Generate outputs that:
+                                        1. For the synonyms:
+                                        - Maintain the same semantic meaning as the complete input
+                                        - Use contemporary, natural Brazilian Portuguese
+                                        - Reflect everyday speech while maintaining clarity
+                                        - Are appropriate for pictogram representation
+                                        - Are easily understood by children
 
-                                            Example inputs and expected outputs:
+                                        2. For the random word:
+                                        - Is related to the context or situation
+                                        - Could be helpful for communication in similar scenarios
+                                        - Is simple and clear
+                                        - Is easy to represent visually
+                                        - Could expand the child's communication options
 
-                                            Input: "escovar os dentes"
-                                            Expected output: limpar os dentes, passar escova nos dentes, fazer a escovação
+                                        Example inputs and expected outputs:
+                                        Input: "escovar os dentes"
+                                        Output: limpar os dentes, fazer a escovação, pasta de dente
 
-                                            Input: "estou com fome"
-                                            Expected output: quero comer, preciso comer, sinto fome
+                                        Input: "estou com fome"
+                                        Output: quero comer, preciso comer, colher
 
-                                            Input: "quero água"
-                                            Expected output: preciso beber água, quero beber água, estou com sede
+                                        Input: "quero água"
+                                        Output: preciso beber água, estou com sede, copo
 
-                                            Input: "estou cansado"
-                                            Expected output: preciso descansar, estou sem energia, estou esgotado
+                                        Input: "estou cansado"
+                                        Output: preciso descansar, estou sem energia, cama
 
-                                            Input: "vamos brincar"
-                                            Expected output: quer brincar comigo, vamos nos divertir, vamos jogar
+                                        Input: "vamos brincar"
+                                        Output: quer brincar comigo, vamos nos divertir, bola
 
-                                            Input: "preciso de ajuda"
-                                            Expected output: pode me ajudar, preciso de auxílio, me ajude por favor
+                                        Input: "preciso de ajuda"
+                                        Output: pode me ajudar, me ajude por favor, mamãe
 
-                                            Input: "não estou bem"
-                                            Expected output: estou doente, me sinto mal, estou indisposto
+                                        Input: "não estou bem"
+                                        Output: estou doente, me sinto mal, remédio
 
-                                            Input: "quero ir ao banheiro"
-                                            Expected output: preciso ir ao banheiro, preciso usar o banheiro, quero usar o banheiro
+                                        Input: "quero ir ao banheiro"
+                                        Output: preciso ir ao banheiro, quero usar o banheiro, papel
 
-                                            Rules for synonym generation:
-                                            1. Use natural Brazilian Portuguese as commonly spoken today
-                                            2. Keep expressions clear and accessible while avoiding slang
-                                            3. Maintain appropriate level of formality for educational context
-                                            4. Ensure expressions are suitable for all age groups
-                                            5. Consider ease of pictogram representation
+                                        Rules for generation:
+                                        1. Use natural Brazilian Portuguese as commonly spoken today
+                                        2. Keep expressions clear and accessible while avoiding slang
+                                        3. Maintain appropriate level of formality for educational context
+                                        4. Ensure expressions are suitable for all age groups
+                                        5. Consider ease of pictogram representation
+                                        6. The random word should be useful for expanding communication options
 
-                                            Output format: Return only the three semantically equivalent expressions as a comma-separated list in Brazilian Portuguese, without any additional text or formatting."""  
+                                        Output format: Return only the two semantically equivalent expressions and one random helpful word as a comma-separated list in Brazilian Portuguese, without any additional text or formatting."""  
                 synonym_responses = aac_service.generate_synonyms(inputs, synonym_system_prompt)
                 new_inputs = [synonym for response in synonym_responses for synonym in response.synonyms]
                 print(f"Generated synonyms: {new_inputs}")
@@ -139,7 +149,15 @@ def generate_structs(max_iterations=1):
                                     Pedir para Usar o Banheiro, eu gostaria de usar o banheiro, 🚽
                                     Lavar as Mãos, eu quero lavar as mãos, 🧼
                                     Buscar Papel Higiênico, eu preciso de papel higiênico, 🧻
-                                    Desinfetar as Mãos, eu quero desinfetar as mãos, 🧴"""  
+                                    Desinfetar as Mãos, eu quero desinfetar as mãos, 🧴
+                                    
+                                    input: Inseto
+                                    output: Qual é o nome deste inseto?, como se chama este inseto? 🐞
+                                    Onde os insetos costumam viver?, onde os insetos normalmente se escondem? 🌿
+                                    Como os insetos se reproduzem?, como acontece a reprodução dos insetos? 🐜
+                                    Quais insetos são benéficos?, quais insetos são bons para o meio ambiente? 🌼
+                                    Por que os insetos são importantes?, por que os insetos são importantes para a natureza? 🌍
+                                    """  
                 card_responses = aac_service.generate_cards(new_inputs, card_system_prompt)
                 new_data = [DatasetRow(input=response.input, output="\n".join(response.output)) for response in card_responses]
                 print(f"Generated cards: {new_data}")
@@ -160,5 +178,5 @@ def generate_structs(max_iterations=1):
         print(f"\nFinished process with {iteration} iterations")
 
 if __name__ == "__main__":
-    max_iterations = 10
+    max_iterations = 100
     generate_structs(max_iterations)
