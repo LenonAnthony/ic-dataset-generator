@@ -9,12 +9,13 @@ from aac_struct_gen.models  import DatasetRow
 def generate_structs(max_iterations=1):
     token = load_environment()
     llm = initialize_llm(token)
-
     aac_service = AACService(llm)
-
+    
     input_file = "dataset.csv"
     output_file = "dataset.csv"
     iteration = 0
+    used_synonyms = set() 
+    current_batch_synonyms = [] 
 
     try:
         while iteration < max_iterations:
@@ -25,10 +26,15 @@ def generate_structs(max_iterations=1):
             print(f"Selected Words: {inputs}")
 
             try:
-                synonym_system_prompt = """You are a specialized educational assistant focused on generating contextually relevant synonyms and helpful words in Brazilian Portuguese for AAC (Augmentative and Alternative Communication) systems. Your task is to analyze the input phrase or expression and generate:
+                synonym_system_prompt = f"""You are a specialized educational assistant focused on generating contextually relevant synonyms and helpful words in Brazilian Portuguese for AAC (Augmentative and Alternative Communication) systems. Your task is to analyze the input phrase or expression and generate:
                                         - 2 semantically equivalent alternatives that preserve the complete meaning and context
                                         - 1 random but contextually helpful Brazilian Portuguese word that could assist children with mobility challenges, AAC users, neurodivergent individuals, etc.
 
+
+                                        Critical Rule:
+                                        - NEVER repeat these already generated synonyms: {', '.join(used_synonyms) if used_synonyms else 'None'}
+                                        - Only generate completely new variations not in the list above
+                                        
                                         For each input phrase:
                                         Generate outputs that:
                                         1. For the synonyms:
@@ -80,8 +86,16 @@ def generate_structs(max_iterations=1):
 
                                         Output format: Return only the two semantically equivalent expressions and one random helpful word as a comma-separated list in Brazilian Portuguese, without any additional text or formatting."""  
                 synonym_responses = aac_service.generate_synonyms(inputs, synonym_system_prompt)
-                new_inputs = [synonym for response in synonym_responses for synonym in response.synonyms]
-                print(f"Generated synonyms: {new_inputs}")
+                new_synonyms = []
+                for response in synonym_responses:
+                    for synonym in response.synonyms:
+                        if synonym not in used_synonyms:
+                            new_synonyms.append(synonym)
+                            used_synonyms.add(synonym)
+                
+                current_batch_synonyms = new_synonyms.copy()
+                print(f"Novos sinônimos gerados: {current_batch_synonyms}")
+
 
             except Exception as e:
                 print(f"Error generated synonyms: {e}")
@@ -158,7 +172,7 @@ def generate_structs(max_iterations=1):
                                     Quais insetos são benéficos?, quais insetos são bons para o meio ambiente? 🌼
                                     Por que os insetos são importantes?, por que os insetos são importantes para a natureza? 🌍
                                     """  
-                card_responses = aac_service.generate_cards(new_inputs, card_system_prompt)
+                card_responses = aac_service.generate_cards(current_batch_synonyms, card_system_prompt)
                 new_data = [DatasetRow(input=response.input, output="\n".join(response.output)) for response in card_responses]
                 print(f"Generated cards: {new_data}")
                 aac_service.update_dataset(output_file, new_data)
@@ -178,5 +192,5 @@ def generate_structs(max_iterations=1):
         print(f"\nFinished process with {iteration} iterations")
 
 if __name__ == "__main__":
-    max_iterations = 100
+    max_iterations = 150
     generate_structs(max_iterations)
