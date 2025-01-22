@@ -171,7 +171,7 @@ def generate_structs(max_iterations=1):
                                     Como os insetos se reproduzem?, como acontece a reprodução dos insetos? 🐜
                                     Quais insetos são benéficos?, quais insetos são bons para o meio ambiente? 🌼
                                     Por que os insetos são importantes?, por que os insetos são importantes para a natureza? 🌍
-                                    """  
+                                    """
                 card_responses = aac_service.generate_cards(current_batch_synonyms, card_system_prompt)
                 new_data = [DatasetRow(input=response.input, output="\n".join(response.output)) for response in card_responses]
                 print(f"Generated cards: {new_data}")
